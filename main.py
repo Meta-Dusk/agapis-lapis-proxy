@@ -78,6 +78,7 @@ def get_ninja_quote() -> QuoteDict:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
+@app.head("/")
 def health_check() -> dict[str, str]:
     """A simple ping endpoint to check if the server is awake."""
     return {
