@@ -1,13 +1,27 @@
 import requests, os
 from fastapi import FastAPI, HTTPException
 from cerebras.cloud.sdk import Cerebras
+from dataclasses import dataclass
+from typing import TypeAlias, Literal
 
 app = FastAPI()
 client = Cerebras(api_key=os.environ.get("CEREBRAS_API_KEY"))
 NINJA_KEY = os.environ.get("NINJAS_API_KEY")
 
-@app.get("/generate-quote/cerebras")
-def get_cerebras_quote(vibe: str = "general love", language: str = "English"):
+Endpoints: TypeAlias = Literal["cerebras", "ninja"]
+QuoteDict: TypeAlias = dict[str, bool | str]
+
+@dataclass
+class URLPaths:
+    gen: str
+    
+    def get(self, endpoint: Endpoints) -> str:
+        return f"{self.gen}/{endpoint}"
+
+urls = URLPaths("/generate-quote")
+
+@app.get(urls.get("cerebras"))
+def get_cerebras_quote(vibe: str = "general love", language: str = "English") -> QuoteDict:
     """Generates a love quote with Cerebras."""
     
     system_prompt = f"""
@@ -42,9 +56,8 @@ def get_cerebras_quote(vibe: str = "general love", language: str = "English"):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.get("/generate-quote/ninja")
-def get_ninja_quote():
+@app.get(urls.get("ninja"))
+def get_ninja_quote() -> QuoteDict:
     """Fetches a pre-existing quote from API Ninjas."""
     try:
         api_url = "https://api.api-ninjas.com/v2/randomquotes?categories=love"
@@ -63,3 +76,11 @@ def get_ninja_quote():
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/")
+def health_check() -> dict[str, str]:
+    """A simple ping endpoint to check if the server is awake."""
+    return {
+        "status": "Online",
+        "message": "The Agapis Lapis Proxy is awake and ready!"
+    }
